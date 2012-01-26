@@ -1,0 +1,120 @@
+This document describes how to incorporate interactive elements in EPUB3 at scale.  There are 3 major components in any system like this:
+
+* *A player*.  A player is any software program that can accept an input file and then render it.  For example, a flashcard player might accept an XML input file and then provide the functionality to move back and forth through the cards, display the answers, give hints, etc.
+* *A data file*.  The data file represents the data to be "played" by the player. In a flash card system, the data file is an XML file.  In an audio file, it's an MP3 played on a quicktime plugin.
+* *An embed link*.  A syntax for embedding a player with a specific media file into a document.   For example, making an embed link on YouTube connects the player to the video you want to watch.
+
+We want to make a simple process for Atlas authors to:
+
+* Use various players (flashcards, code magnets, multiple-choice quizzes, etc) written in processing.js, or even write their own custom players themselves. 
+* Create data files in the Atlas interface.  They can either type them in directly, or use a "helper" application that has a nice GUI that generates data files they can paste into Atlas.
+* Create a simple linking system that will pull the interactive element into the document.
+
+This document describes a proof of concept for a flashcard player written in processing.js.  The basic idea is simple:
+
+* We write various interactive players using processing.js
+* We use git submodules to include the players into the author's repo
+* The author can write the media files as simple XML input files
+* The author embeds the links to the player and media file inside the asciidoc source.  On the backend, we transform the embed link into the javascript  code necessary to "play" the file.
+
+I've developed this flashcard player as a proof of concept.  You can find the source code at:
+
+https://github.com/MakerPress/flashcards
+
+To run the app:
+
+----
+$ git clone git@github.com:MakerPress/flashcards.git
+$ cd flashcards
+$ python -m SimpleHTTPServer
+----
+
+The last command will start a simple HTTP server on port 8000.  Then, open your browser and go to http://localhost:8000/
+
+Click the "Draw" button to load the cards.  You can click around through the cards, see the answers, and so forth.
+
+Here's more info on each element.
+
+[NOTE]
+====
+I relied on this article called http://processingjs.nihongoresources.com/processing%20on%20the%20web/[Processing on the Web] for a lot of this.  It's a bit outdated, but a great intro to the issues involved in passing data back and forth from a Javasctipt page to a processing.js sketch.  Highly recommended reading.
+====
+
+
+== The Player
+
+The player is a Processing sketch that uses the new "Export to processing.js" mode in version 2.0.  Processing / processing.js is attractive for several reasons:
+
+* Processing has a vibrant open source community and is backed by Google
+* There is a large community of people with Processing expertise
+* Processing.js cleanly converts to HTML5 / Javascript
+* We can use git submodules to pull the player into the author's repo.
+* The player has to have a method called buildFromXML(String xml) that is used to parse the XML media file.  This method is referenced in the page that embeds the element.
+
+The downsides of this approach are:
+
+* There are some subtle differences b/t a full Processing sketch and processing.js.  It can be really hard to debug.
+* Processing 2.0 is still in beta, but it works.
+* Not sure how the touch libraries will work with processing. Need some experimentation here.
+
+== The Data File
+
+The data is an XML document that looks like this (this file is called state_capitals.xml):
+
+----
+<flashcards>
+   <flashcard question = 'What is the capital of Massachusetts?' answer = 'Boston'/>
+   <flashcard question = 'What is the capital of New York?' answer = 'Albany'/>
+   <flashcard question = 'What is the capital of California?' answer = 'Sacramento'/>
+</flashcards>
+----
+
+Inside Atlas, the author can simply upload the file as an attachment, or edit it directly in the interface in some way.    
+
+
+== Embed Link
+
+The embed link is a passthrough to a DocBook Processing Instruction (PI) that pulls in the required JavaScript code.  The  markup looks something like this:
+
+----
+++++
+<?dbhtml-insertfile player="flash_card/js_assets/cards.pde" data="state_capitals.xml"?>
+++++
+----
+
+
+== Required Javascript
+
+The embed link needs to be translated into JavaScript that can be inserted into the EPUB.  The following example shows a working example:
+
+----
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+		<title>My Processing Page</title>
+		<script type="text/javascript" src="http://code.jquery.com/jquery-1.6.2.min.js"></script>
+		<script type="text/javascript" src="applet_js/processing.js"></script>
+		<script type="text/javascript">
+		function loadXML(id, fn) {
+				var pjs = Processing.getInstanceById(id);
+				var xml = $.ajax({url: fn, async: false }).responseText;
+				pjs.buildFromXML(xml); 
+        }
+		</script>
+	</head>
+	<body>
+		<canvas id="1234" data-processing-sources="applet_js/flashcards.pde"/></canvas>
+		<div id="controller"><button id="loadXML" onclick="loadXML('1234', 'state_capitals.xml')"/>Draw!</div>
+	</body>
+</html>
+----
+ 
+There elements of note include:
+
+* The jQuery and processing.js libraries have to be added.  This just needs to be done once.
+* A JavaScript function called loadXML needs to be added.  This function links the media file to the player file.  This just needs to be done once.
+* A canvas with a unique ID that runs the processing sketch.  The data-processing-sources attribute is supplied by the "player" attribute in the embed link.
+* A button to start the player.  It's onClick attribute executes the "loadXML" function with the canvas ID and the data file supplied in the embed link.
+
+The one piece I'd like to do is figure out how to have the canvas load the data file automatically, rather than the user having to press the button.  There is probably a sneaky javascript way to do this.  
