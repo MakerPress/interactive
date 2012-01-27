@@ -10,9 +10,9 @@ void setup() {
   textFont (createFont("", fontSize), fontSize);
   flashcards = new ArrayList();
   hotspots = new ArrayList();
-  hotspots.add (new Hotspot ("left","data/arrow1_w.png", 10, 160));
-  hotspots.add (new Hotspot ("check","data/check.png", 94, 160));
-  hotspots.add (new Hotspot ("right","data/arrow1_e.png", 52 , 160));
+  hotspots.add (new Hotspot ("left","arrow1_w.png", 10, 160));
+  hotspots.add (new Hotspot ("check","check.png", 94, 160));
+  hotspots.add (new Hotspot ("right","arrow1_e.png", 52 , 160));
 }
 
 
