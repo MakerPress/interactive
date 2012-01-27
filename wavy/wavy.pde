@@ -5,27 +5,44 @@ www.bluethen.com
 */
 /* Variable a is used for determining the shape's y position, coupled with the distance they are from the center. */
 float a;
+
+
+int cx, cy, ch, cw;
+float a_min = 0.1;
+float a_max = 0.5;
+float da = (a_min + a_max) / 2;
+
 /* Setup(), the first function called when the applet is started */
 void setup()
 {
   /* The applet is set to 500 pixels by 500 pixels */
   size(500,500);
+  cx = 50;
+  cy = 450;
+  cw = 400;
+  ch = 5;
   /* RGB mode set to maximum of 6, since we'll be using 6 colors. 0 for black, 6 for white, and everything in between. */
   colorMode(RGB, 6);
   /* The stroke color is used to determine the border color of each quadrilateral. */
   stroke(0);
   /* Frame rate is set to 30. */
   frameRate(30);
+    textFont (createFont("", 16), 16);
+
 }
+
+
 void draw()
 {
   /*
   a is decreased by 0.08. It represents the amount of radians the height of our boxes changes, and their speed.
   If we did nothing to a, then none of our shapes will move, so a is a key component in our formulas.
   */
-  a -= 0.1;
+  a -= da;  
+
   /* Screen is cleared and background is set to 6 (white). */
   background(6);
+  text("Made by Jared 'BlueThen' C.",10,10);
   /*
   These are our loops.
   We loop through 14 rows (-7 through 7) for the x axis, and within each row, we loop through 14 collumns for the z axis
@@ -109,6 +126,14 @@ void draw()
     */
     fill(4 + y * 0.05);
     quad(isox1, isoy1-y, isox2, isoy2-y, isox3, isoy3-y, isox4, isoy4-y);
+    
+    fill(0);
+    rect(cx,cy,cw,ch);
+    float px = map(da, a_min, a_max, cx, cx+cw);
+    ellipse (px,cy+ch/2,20,20);
+    
+    text("Click the line to change the wave speed",cx,cy+30);
+
    }
   }
 }
@@ -116,4 +141,13 @@ void draw()
 float distance(float x,float y,float cx,float cy) {
   return sqrt(sq(cx - x) + sq(cy - y));
 }
+
+/*
+|| Determine if they've clicked the control line
+*/
+void mouseClicked() {
+  if ( (mouseX > cx) && (mouseX < (cx+cw)) && (mouseY > cy) && (mouseY < (cy+cx))) {
+     da = map (mouseX, cx, cx+cw, a_min, a_max);
+  }
+}  
 
